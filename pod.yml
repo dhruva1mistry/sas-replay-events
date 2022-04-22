@@ -1,0 +1,13 @@
+containers:
+  - name: sas-replay-events
+    image: $image
+    $resources
+    ports:
+      - containerPort: 8888
+        name: http
+        protocol: TCP
+    env:
+      - name: min_heap_size
+        value: $min_heap_size
+      - name: max_heap_size
+        value: $max_heap_size

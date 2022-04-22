@@ -1,0 +1,130 @@
+buildscript {
+
+    repositories {
+        maven {
+            credentials {
+                username archivaUser
+                password archivaPass
+            }
+            url skyReleasesMirror
+        }
+        maven {
+            credentials {
+                username archivaUser
+                password archivaPass
+            }
+            url centralMirror
+        }
+        maven {
+            credentials {
+                username archivaUser
+                password archivaPass
+            }
+            url gradlePluginsMirror
+        }
+        mavenCentral()
+        mavenLocal()
+    }
+
+    dependencies {
+        classpath "com.sky.cirrus.core.gradle:k8-plugin:36.+"
+        classpath 'com.github.jengelman.gradle.plugins:shadow:6.1.+'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'application' // Required for running the jar as a main program
+apply plugin: 'idea'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'k8plugin'
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+k8plugin {
+    team = 'vidar'
+    registry = 'registry.tools.cosmic.sky'
+    serviceName = 'sas-replay-events'
+    servicePorts {
+        "http" {
+            targetPort = 8888
+            port = 8888
+        }
+    }
+    deployments {
+        local {
+            namespace = "vidar-local"
+            repository = "local"
+            kubectlContext = "docker-desktop"
+            replicas = 3
+            deploymentStrategy = 'Recreate'
+//               kubectlContext = 'dev.ce.eu-central-1-aws.npottdc.sky'
+            addPodPlaceholder "resources", "resources: { limits: { cpu: 0, memory: 1.2Gi }, requests: { cpu: 0, memory: 1.2Gi } }"
+            addPodPlaceholder "image", "local/adi-processor:v$project.version"
+            addPodPlaceholder "min_heap_size", "768M"
+            addPodPlaceholder "max_heap_size", "768M"
+        }
+    }
+}
+
+
+group 'com.sky'
+version '1.0-SNAPSHOT'
+
+jar.archiveName "sas-replay-events.jar"
+
+// Properties for the 'application' plugin to set the entry point in the manifest
+//group = 'com.sky.sas.events.replay'
+mainClassName = 'com.sky.sas.events.replay.ReplayEventsApp'
+
+// Shadow plugin config for the fat jar
+shadowJar {
+    archiveClassifier.set('') // Remove the 'all' classifier
+    archiveVersion.set('') // Prevent the project.version being added
+
+    // This is required for dropwizard-logging-encoders
+    shadowJar {
+        mergeServiceFiles()
+    }
+}
+
+runShadow {
+    // Dropwizard arguments
+    args 'server', 'reference.yml'
+}
+
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.sky.sas.events.replay.ReplayEventsApp',
+                'Implementation-Title': 'SAS Replay Events Restful App',
+                'Implementation-Version': project.version,
+                'Built-By': 'Vidar Team',
+                'Built-Date': new Date(),
+                'Built-JDK': System.getProperty('java.version')
+        )
+    }
+    enabled = true
+}
+test {
+    useJUnitPlatform()
+}
+
+// Ensure the jar is built when building the Docker image
+buildImageDependencies.dependsOn shadowJar
+//buildImageDependencies.mustRunAfter 'build'
+task cdBuild(dependsOn: ['clean', 'build'])
+task cdRelease(dependsOn: ['buildImage', 'deployToLocal', 'publish'])
