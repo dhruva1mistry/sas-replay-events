@@ -7,3 +7,10 @@ Open terminal and supply below commands
 
 1. build .jar : ```./gradlew clean build```
 2. build docker image : ```./gradlew clean build``` OR just ```./gradlew buildImage```
+
+
+
+
+kubectl config get-contexts
+kubectl config use-context docker-desktop
+kubectl get nodes
