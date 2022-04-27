@@ -59,6 +59,7 @@ dependencies {
 k8plugin {
     team = 'vidar'
     registry = 'registry.tools.cosmic.sky'
+    mirror = 'mirror.registry:5000' //service url for mirror Repo
     serviceName = 'sas-replay-events'
 //    podYaml = "./pod.yml"   Not mandatory when using default place to put
 
@@ -75,7 +76,7 @@ k8plugin {
     deployments {
         local {
             //   namespace = "vidar-local"
-            namespace = "default d"
+            namespace = "default"
             repository = "test"
             kubectlContext = "docker-desktop"
 //            kubectlContext = "dev.cosmic.sky"
@@ -173,6 +174,6 @@ distZip.enabled = false
 // Ensure the jar is built when building the Docker image
 buildImageDependencies.dependsOn shadowJar
 //buildImageDependencies.mustRunAfter 'build'
-task cdBuild(dependsOn: ['clean', 'build'])
-task cdRelease(dependsOn: ['buildImage'])
+task cdBuild(dependsOn: ['clean', 'build' ])
+task cdRelease(dependsOn: ['buildImage', 'pushImageToTest'])
 //task cdRelease(dependsOn: ['buildImage', 'deployToLocal', 'pushImageToLocal'])
