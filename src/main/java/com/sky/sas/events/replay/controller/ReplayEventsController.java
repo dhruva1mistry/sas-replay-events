@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReplayEventsController {
 
     @GetMapping(value = "/replay")
-    //, accepts = MediaType.)
-    public ResponseEntity<Object> printGreetings() {
+    public ResponseEntity printGreetings() {
         return ResponseEntity.ok("I'm fine");
     }
 }
