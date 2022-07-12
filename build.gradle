@@ -1,3 +1,5 @@
+import java.time.Duration
+
 buildscript {
     ext {
         springBootVersion = "2.6.6"
@@ -26,6 +28,7 @@ buildscript {
 
 plugins{
     id 'org.springframework.boot' version "${springBootVersion}"
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
 apply plugin: 'java'
@@ -33,6 +36,8 @@ apply plugin: 'application' // Required for running the jar as a main program
 apply plugin: 'idea'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'k8plugin'
+apply plugin: 'io.spring.dependency-management'
+
 
 idea {
     module {
@@ -48,13 +53,24 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.24'
 
     implementation "org.springframework.boot:spring-boot-starter:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}"
     implementation "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
 
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
+    implementation 'com.opencsv:opencsv:5.6'
+
 }
+
+group 'com.sky'
+version '1.23'
+jar.archiveName "sas-replay-events.jar"
+
+// Properties for the 'application' plugin to set the entry point in the manifest
+mainClassName = 'com.sky.sas.events.replay.ReplayEventsApp'
 
 k8plugin {
     team = 'vidar'
@@ -63,6 +79,7 @@ k8plugin {
     serviceName = 'sas-replay-events'
     // The tool to use for building and pushing Docker images.
     imageBuilder = ''
+    deployTimeout = Duration.ofSeconds(500)
 
     servicePorts {
         http {
@@ -72,64 +89,58 @@ k8plugin {
     }
 
     deployments {
-//        local {
-//            //   namespace = "vidar-local"
-//            namespace = "default"
-//            repository = "test"
-//            kubectlContext = "docker-desktop"
-////            kubectlContext = "dev.cosmic.sky"
-//            replicas = 3
-//            deploymentStrategy = 'Recreate'
-////               kubectlContext = 'dev.ce.eu-central-1-aws.npottdc.sky'
-//            addPodPlaceholder "resources", "resources: { limits: { cpu: 0, memory: 1.2Gi }, requests: { cpu: 0, memory: 1.2Gi } }"
-//            addPodPlaceholder "image", "local/sas-replay-events"
-//            addPodPlaceholder "min_heap_size", "768M"
-//            addPodPlaceholder "max_heap_size", "768M"
-//            ingresses {
-//                http {
-//                    host = 'sas-replay-events.docker-desktop'
-//                    path = '/'
-//                    port = 'http'
-//                    scheme = 'INTERNAL'
-//                    ingressClassName = 'main'
-//                }
-//            }
-//        }
-            integration {
-                namespace = "sas-kafka-scheduler-int"
-                repository = "test"
-                kubectlContext = "dev.ce.eu-central-1-aws.npottdc.sky"
-                replicas = 1
-                deploymentStrategy = "Recreate"
-                deploymentMaxUnavailable = 1
-                deploymentMaxSurge = 0
-                addPodPlaceholder "resources", "resources: { limits: { cpu: 0, memory: 0.5Gi }, requests: { cpu: 0, memory: 0.5Gi } }"
-//                addPodPlaceholder "image", "local/sas-replay-events"
-                addPodPlaceholder "min_heap_size", "500M"
-                addPodPlaceholder "max_heap_size", "500M"
-                ingresses {
-                    http {
-                        host = 'sas-kafka-scheduler-int.dev.ce.eu-central-1-aws.npottdc.sky'
-                        path = '/'
-                        port = 'http'
-                        scheme = 'INTERNAL'  //TODO find what happens w/o this
-                        ingressClassName = 'main'
-                    }
+        local {
+            //   namespace = "vidar-local"
+            namespace = "default"
+            repository = "test"
+            kubectlContext = "docker-desktop"
+//            kubectlContext = "dev.cosmic.sky"
+            replicas = 2
+            deploymentStrategy = 'Recreate'
+//               kubectlContext = 'dev.ce.eu-central-1-aws.npottdc.sky'
+            addPodPlaceholder "resources", "resources: { limits: { cpu: 0, memory: 1.2Gi }, requests: { cpu: 0, memory: 1.2Gi } }"
+            addPodPlaceholder "image", "local/sas-replay-events:v${project.version}"
+            addPodPlaceholder "min_heap_size", "768M"
+            addPodPlaceholder "max_heap_size", "768M"
+            ingresses {
+                http {
+                    host = 'sas-replay-events.docker-desktop'
+                    path = '/'
+                    port = 'http'
+                    scheme = 'INTERNAL'
+                    ingressClassName = 'main'
                 }
             }
+        }
+//            integration {
+//                namespace = "sas-kafka-scheduler-int"
+//                repository = "test"
+//                kubectlContext = "dev.ce.eu-central-1-aws.npottdc.sky"
+//                replicas = 1
+//                deploymentStrategy = "Recreate"
+//                deploymentMaxUnavailable = 1
+//                deploymentMaxSurge = 0
+//                addPodPlaceholder "resources", "resources: { limits: { cpu: 0, memory: 0.5Gi }, requests: { cpu: 0, memory: 0.5Gi } }"
+////                addPodPlaceholder "image", "local/sas-replay-events"
+//                addPodPlaceholder "min_heap_size", "500M"
+//                addPodPlaceholder "max_heap_size", "500M"
+//                ingresses {
+//                    http {
+//                        host = 'sas-kafka-scheduler-int.dev.ce.eu-central-1-aws.npottdc.sky'
+//                        path = '/sas-replay-events'
+//                        port = 'http'
+//                        backendTimeout = Duration.ofSeconds(10)
+//                        ingressClassName = 'main-nlb-internal'
+//                    }
+//                }
+//            }
         }
     }
 
 
-group 'com.sky'
-version '1.9'
-jar.archiveName "sas-replay-events.jar"
-
-// Properties for the 'application' plugin to set the entry point in the manifest
-mainClassName = 'com.sky.sas.events.replay.ReplayEventsApp'
 
 // Shadow plugin config for the fat jar
-shadowJar {
+/*shadowJar {
     archiveClassifier.set('') // Remove the 'all' classifier
     archiveVersion.set('') // Prevent the project.version being added
 
@@ -137,7 +148,7 @@ shadowJar {
     shadowJar {
         mergeServiceFiles()
     }
-}
+}*/
 
 //runShadow {
 //    // Dropwizard arguments
@@ -169,7 +180,7 @@ distTar.enabled = false
 distZip.enabled = false
 
 // Ensure the jar is built when building the Docker image
-buildImageDependencies.dependsOn shadowJar
+buildImageDependencies.dependsOn bootJar
 //buildImageDependencies.mustRunAfter 'build'
 task cdBuild(dependsOn: ['clean', 'build' ])
 task cdRelease(dependsOn: ['buildImage','pushImageToTest'])

@@ -14,4 +14,6 @@ ADD ./target/libs/sas-replay-events.jar .
 ADD start-app.sh .
 RUN chmod +x ./start-app.sh
 
+EXPOSE 8888
+
 ENTRYPOINT ["/start-app.sh", "sas-replay-events.jar"]
